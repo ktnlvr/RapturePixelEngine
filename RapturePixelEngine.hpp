@@ -31,7 +31,12 @@ public:
     Platform& operator=(Platform&&) = delete;
 
     /// Create the window and prepare the world!
-    void CreateWindow();
+    void CreateWindow(
+        int x = 16, 
+        int y = 16, 
+        unsigned int width = 256, 
+        unsigned int height = 256,
+        const char* title = "RapturePixelEngine Window");
     /// Make graphics and initialize GL context
     void CreateGraphics();
     /// Show the window 
@@ -78,7 +83,13 @@ using RapturePtr = RapturePixelEngine*;
 // ------------------------------ 
 #pragma region METHOD IMPLEMENTATIONS
 #ifdef __linux__
-void Platform::CreateWindow() {
+void Platform::CreateWindow(
+    int x, 
+    int y, 
+    unsigned int width, 
+    unsigned int height,
+    const char* title) {
+
     // Try open monitor
     d = XOpenDisplay(NULL);
 
@@ -94,11 +105,12 @@ void Platform::CreateWindow() {
         // display, parent window
         d, RootWindow(d, screen),
         // x, y, width, height 
-        16, 16, 256, 256, 
+        x, y, width, height,
         // border with, border, background
         1, XBlackPixel(d, screen), XWhitePixel(d, screen));
 
     XSelectInput(d, w, ExposureMask | KeyPressMask);
+    XStoreName(d, w, title);
 }
 
 void Platform::CreateGraphics() {
