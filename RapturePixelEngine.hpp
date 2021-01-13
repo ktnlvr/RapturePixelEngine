@@ -224,7 +224,8 @@ void Platform::CreateWindow(
         // border with, border, background
         1, XBlackPixel(d, screen), XWhitePixel(d, screen));
 
-    XSelectInput(d, w, ExposureMask | KeyPressMask);
+    XSelectInput(d, w, 
+    ExposureMask | KeyPressMask | KeyReleaseMask);
     XStoreName(d, w, title);
 }
 
