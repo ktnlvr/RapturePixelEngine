@@ -7,6 +7,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <thread>
+#include <iostream>
 
 #ifdef __linux__
 #include <X11/Xlib.h>
@@ -16,6 +17,26 @@
 // --- CLASSES AND STRUCTS ---
 // ---------------------------
 #pragma region CLASSES AND STRUCTS
+
+/// POD (Plain old data) event object
+struct Event {
+    enum class EventType : uint8_t {
+        NONE = 0,
+        SOME = 1,
+    } type;
+
+    /// Create new empty event object
+    Event() : type(EventType::NONE) {}
+    /// Create a new event of a specific type
+    Event(EventType type) : type(type) {}
+
+    #ifdef __linux__
+    /// Forge a new event based on XEVENT
+    Event(const XEvent* xevent);
+    #endif
+};
+
+
 class Platform {
 protected:
     Platform() = default;
@@ -45,6 +66,8 @@ public:
     void CreateGraphics();
     /// Show the window 
     void ShowWindow();
+    /// Check if there is an event
+    bool CheckEvent(Event& out);
 
 private:
 #ifdef __linux__
@@ -63,6 +86,10 @@ protected:
 
 public:
     Platform* platform = nullptr;
+
+    int x, y;
+    unsigned int width, height;
+    const char* title;
 
     // Get the only RapturePixelEngine instance
     static inline RapturePixelEngine* instance() {
@@ -83,15 +110,15 @@ public:
         unsigned int width = 256, 
         unsigned int height = 256,
         const char* title = "RapturePixelEngine Window") {
+        
+        this->x = x, this->y = y, this->width = width, this->height = height,
+        this->title = title;
 
-        platform->CreateWindow(x, y, width, height, title);
-        platform->CreateGraphics();
         theThread = std::thread([]() { TheThread(); });
     }
 
     void Start(bool join) {
         isRunning = true;
-        platform->ShowWindow();
         if (join) {
             theThread.join();
         }
@@ -109,6 +136,18 @@ public:
     static void TheThread() {
         // Instance reference
         auto instance = RapturePixelEngine::instance();
+        auto platform = instance->platform;
+
+        // Creation has to be called here, so the thread recieves control
+        platform->CreateWindow(
+            instance->x, 
+            instance->y, 
+            instance->width, 
+            instance->height, 
+            instance->title);
+        platform->CreateGraphics();
+
+        platform->ShowWindow();
 
         // Multithreading lock
         std::unique_lock<std::mutex> lock(instance->mtx);
@@ -123,7 +162,10 @@ public:
         instance->lock.notify_all();
 
         for(;;) {
-            printf("Loop tick.\n");
+            Event event;
+            if(instance->platform->CheckEvent(event)) {
+                std::cout << "Some event!\n";
+            }
         }
     }
 };
@@ -174,6 +216,20 @@ void Platform::CreateGraphics() {
 void Platform::ShowWindow() {
     XMapWindow(d, w);
     XFlush(d);
+}
+
+bool Platform::CheckEvent(Event& out) {
+    XEvent tmp;
+    bool ret = XCheckWindowEvent(d, w, ExposureMask | KeyPressMask, &tmp);
+
+    switch (tmp.type)
+    {
+    default:
+        out = Event(Event::EventType::SOME);
+        break;
+    }
+
+    return ret;
 }
 #endif // __linux__
 
