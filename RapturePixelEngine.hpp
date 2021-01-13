@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <thread>
 #include <iostream>
+#include <functional>
 
 #ifdef __linux__
 #include <X11/Xlib.h>
@@ -20,10 +21,24 @@
 
 /// POD (Plain old data) event object
 struct Event {
+    /// Type of the occured event
     enum class EventType : uint8_t {
         NONE = 0,
-        SOME = 1,
+        KEY = 1,
     } type;
+    
+    /// Specific for EventType::Key
+    enum class KeyEventType { 
+        PRESS = 0, 
+        RELEASE = 1,
+    };
+
+    union {
+        struct 
+        {
+            KeyEventType type;
+        } KeyEvent;
+    };
 
     /// Create new empty event object
     Event() : type(EventType::NONE) {}
@@ -90,6 +105,10 @@ public:
     int x, y;
     unsigned int width, height;
     const char* title;
+
+    struct {
+        std::function<void(const Event&)> OnEventCallback = [](const Event&){}; 
+    } callbacks;
 
     // Get the only RapturePixelEngine instance
     static inline RapturePixelEngine* instance() {
@@ -164,7 +183,7 @@ public:
         for(;;) {
             Event event;
             if(instance->platform->CheckEvent(event)) {
-                std::cout << "Some event!\n";
+                instance->callbacks.OnEventCallback(event);
             }
         }
     }
@@ -220,12 +239,24 @@ void Platform::ShowWindow() {
 
 bool Platform::CheckEvent(Event& out) {
     XEvent tmp;
-    bool ret = XCheckWindowEvent(d, w, ExposureMask | KeyPressMask, &tmp);
+    bool ret = XCheckWindowEvent(d, w, 
+        ExposureMask | KeyPressMask | KeyReleaseMask, 
+        &tmp);
 
     switch (tmp.type)
     {
+    case KeyPress:
+        out = Event(Event::EventType::KEY);
+        out.KeyEvent.type = Event::KeyEventType::PRESS;
+        break;
+
+    case KeyRelease:
+        out = Event(Event::EventType::KEY);
+        out.KeyEvent.type = Event::KeyEventType::RELEASE;
+        break;
+
     default:
-        out = Event(Event::EventType::SOME);
+        out = Event(Event::EventType::NONE);
         break;
     }
 
