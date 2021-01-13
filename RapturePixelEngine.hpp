@@ -8,12 +8,16 @@
 #include <X11/Xlib.h>
 #endif
 
+// ---------------------------
+// --- CLASSES AND STRUCTS ---
+// ---------------------------
+#pragma region CLASSES AND STRUCTS
 class Platform {
 protected:
     Platform() = default;
 
 public:
-    // Get the only Platform instance
+    /// Get the only Platform instance
     static inline Platform* instance() {
         static Platform platform;
         return &platform;
@@ -26,8 +30,11 @@ public:
     Platform& operator=(const Platform&) = delete;
     Platform& operator=(Platform&&) = delete;
 
+    /// Create the window and prepare the world!
     void CreateWindow();
+    /// Make graphics and initialize GL context
     void CreateGraphics();
+    /// Show the window 
     void ShowWindow();
 
 private:
@@ -61,6 +68,7 @@ public:
     RapturePixelEngine& operator=(const RapturePixelEngine&) = delete;
     RapturePixelEngine& operator=(RapturePixelEngine&&) = delete;
 };
+#pragma endregion // CLASSES AND STRUCTS 
 
 // Pointer type for RapturePixelEngine
 using RapturePtr = RapturePixelEngine*;
@@ -68,10 +76,13 @@ using RapturePtr = RapturePixelEngine*;
 // ------------------------------
 // --- METHOD IMPLEMENTATIONS ---
 // ------------------------------ 
-
+#pragma region METHOD IMPLEMENTATIONS
 #ifdef __linux__
 void Platform::CreateWindow() {
+    // Try open monitor
     d = XOpenDisplay(NULL);
+
+    // Halt if couldn't
     if(d == nullptr) {
         printf("Can't connect X server.");
         std::exit(1);
@@ -100,13 +111,6 @@ void Platform::ShowWindow() {
 }
 #endif // __linux__
 
-
-
-
-
-
-
-
-
+#pragma endregion // METHOD IMPLEMENTATIONS
 
 #endif // _RAPTURE_PIXEL_ENGINE_H_INCLUDED
