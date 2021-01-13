@@ -3,6 +3,10 @@
 
 #include <cstring>
 #include <stdlib.h>
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
+#include <thread>
 
 #ifdef __linux__
 #include <X11/Xlib.h>
@@ -72,6 +76,56 @@ public:
     RapturePixelEngine(RapturePixelEngine&&) = delete;
     RapturePixelEngine& operator=(const RapturePixelEngine&) = delete;
     RapturePixelEngine& operator=(RapturePixelEngine&&) = delete;
+
+    void Construct(
+        int x = 16, 
+        int y = 16, 
+        unsigned int width = 256, 
+        unsigned int height = 256,
+        const char* title = "RapturePixelEngine Window") {
+
+        platform->CreateWindow(x, y, width, height, title);
+        platform->CreateGraphics();
+        theThread = std::thread([]() { TheThread(); });
+    }
+
+    void Start(bool join) {
+        isRunning = true;
+        platform->ShowWindow();
+        if (join) {
+            theThread.join();
+        }
+    }
+
+    /// Mutex lock for thread safety
+    std::mutex mtx;
+    /// Lock to prevent changes
+    std::condition_variable lock;
+    /// Defines if the thread is active or not
+    std::atomic_bool isRunning{false};
+    /// Main Engine thread
+    std::thread theThread;
+
+    static void TheThread() {
+        // Instance reference
+        auto instance = RapturePixelEngine::instance();
+
+        // Multithreading lock
+        std::unique_lock<std::mutex> lock(instance->mtx);
+
+        // Wait for isRunning to be true
+        instance->lock.wait(lock, []() {
+            return RapturePixelEngine::instance()->isRunning.load();
+        });
+
+        // Unlock all the locks!
+        lock.unlock();
+        instance->lock.notify_all();
+
+        for(;;) {
+            printf("Loop tick.\n");
+        }
+    }
 };
 #pragma endregion // CLASSES AND STRUCTS 
 
