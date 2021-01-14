@@ -224,6 +224,8 @@ void rpe::Platform::CreateWindow(
     XSelectInput(d, w, 
     ExposureMask | KeyPressMask | KeyReleaseMask);
     XStoreName(d, w, title);
+
+    XAutoRepeatOff(d);
 }
 
 void rpe::Platform::CreateGraphics() {
