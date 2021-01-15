@@ -20,6 +20,9 @@
 // ---------------------------
 #pragma region CLASSES AND STRUCTS
 namespace rpe {
+    /// Forward definition for RapturePixelEngine
+    typedef class RapturePixelEngine;
+
     /// POD (Plain old data) event object
     struct Event {
         /// Type of the occured event
@@ -81,7 +84,7 @@ namespace rpe {
         /// Show the window 
         void ShowWindow();
         /// Process all the incoming events in the library requires so
-        void PollEvents(std::function<void(const Event&)>&);
+        void PollEvents(rpe::RapturePixelEngine*);
 
     private:
     #ifdef __linux__
@@ -108,9 +111,14 @@ namespace rpe {
         double deltaTime;
 
         struct {
-            std::function<void(const Event&)> OnEventCallback = [](const Event&){}; 
+            /// Fires just when any window event happens
+            std::function<void(const Event&)> OnEventCallback = [](const Event&) {}; 
+            /// Fires when the application has just started, but initialized
             std::function<void()> OnBegin = []() {};
+            /// Fires when the application is done
             std::function<void()> OnEnd = []() {};
+            /// Fires when a key is pressed, guaranteed to be Event::KeyEvent 
+            std::function<void(const Event&)> OnKey = OnEventCallback;
         } callbacks;
 
         // Get the only RapturePixelEngine instance
@@ -198,7 +206,7 @@ namespace rpe {
                         currentFrameTime - lastFrameTime).count();
                 lastFrameTime = currentFrameTime;
                 
-                platform->PollEvents(instance->callbacks.OnEventCallback);
+                platform->PollEvents(instance);
             }
 
             instance->callbacks.OnEnd();
@@ -256,7 +264,7 @@ void rpe::Platform::ShowWindow() {
     XFlush(d);
 }
 
-void rpe::Platform::PollEvents(std::function<void(const Event&)>& callback) {
+void rpe::Platform::PollEvents(rpe::RapturePixelEngine* engine) {
     XEvent tmp;
     Event out;
     
@@ -269,11 +277,13 @@ void rpe::Platform::PollEvents(std::function<void(const Event&)>& callback) {
     case KeyPress:
         out = Event(Event::EventType::KEY);
         out.keyEvent.type = Event::KeyEventType::PRESS;
+        if(newEvent) engine->callbacks.OnKey(out);
         break;
-
     case KeyRelease:
         out = Event(Event::EventType::KEY);
         out.keyEvent.type = Event::KeyEventType::RELEASE;
+        
+        if(newEvent) engine->callbacks.OnKey(out);
         break;
 
     default:
@@ -281,7 +291,7 @@ void rpe::Platform::PollEvents(std::function<void(const Event&)>& callback) {
         break;
     }
     
-    if(newEvent) callback(out);
+    if(newEvent) engine->callbacks.OnEventCallback(out);
 
     return;
 }

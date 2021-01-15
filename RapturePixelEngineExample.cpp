@@ -11,16 +11,11 @@ int main(int argc, char *argv[]) {
     RapturePtr engine = RapturePixelEngine::instance();
 
     // Register a callback for general event
-    engine->callbacks.OnEventCallback = [](const Event& e) {
-        switch (e.type)
-        {
-        case Event::EventType::KEY: {
-            std::cout << (int)e.KeyEvent.type << "\n";
-        } break;
-        
-        case Event::EventType::NONE:
-        default:
-            break;
+    engine->callbacks.OnKey = [](const Event& e) {
+        if(e.keyEvent.type == Event::KeyEventType::PRESS) {
+            printf("Pressed\n");
+        } else if (e.keyEvent.type == Event::KeyEventType::RELEASE) {
+            printf("Released\n");
         }
     };
 
