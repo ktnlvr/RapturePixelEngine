@@ -78,8 +78,8 @@ namespace rpe {
         void CreateGraphics();
         /// Show the window 
         void ShowWindow();
-        /// Check if there is an event
-        bool CheckEvent(Event& out);
+        /// Process all the incoming events in the library requires so
+        void PollEvents(std::function<void(const Event&)>&);
 
     private:
     #ifdef __linux__
@@ -176,12 +176,8 @@ namespace rpe {
             // Unlock all the locks!
             lock.unlock();
             instance->lock.notify_all();
-
             for(;;) {
-                Event event;
-                if(instance->platform->CheckEvent(event)) {
-                    instance->callbacks.OnEventCallback(event);
-                }
+                platform->PollEvents(instance->callbacks.OnEventCallback);
             }
         }
     };
@@ -237,11 +233,13 @@ void rpe::Platform::ShowWindow() {
     XFlush(d);
 }
 
-bool rpe::Platform::CheckEvent(Event& out) {
+void rpe::Platform::PollEvents(std::function<void(const Event&)>& callback) {
     XEvent tmp;
-    bool ret = XCheckWindowEvent(d, w, 
-        ExposureMask | KeyPressMask | KeyReleaseMask, 
-        &tmp);
+    Event out;
+    
+    bool newEvent = XCheckWindowEvent(d, w, 
+    ExposureMask | KeyPressMask | KeyReleaseMask, 
+    &tmp);
 
     switch (tmp.type)
     {
@@ -259,8 +257,10 @@ bool rpe::Platform::CheckEvent(Event& out) {
         out = Event(Event::EventType::NONE);
         break;
     }
+    
+    if(newEvent) callback(out);
 
-    return ret;
+    return;
 }
 #endif // __linux__
 
