@@ -9,6 +9,7 @@
 #include <thread>
 #include <iostream>
 #include <functional>
+#include <chrono>
 
 #ifdef __linux__
 #include <X11/Xlib.h>
@@ -103,8 +104,12 @@ namespace rpe {
         unsigned int width, height;
         const char* title;
 
+        double deltaTime;
+
         struct {
             std::function<void(const Event&)> OnEventCallback = [](const Event&){}; 
+            std::function<void()> OnBegin = []() {};
+            std::function<void()> OnEnd = []() {};
         } callbacks;
 
         // Get the only RapturePixelEngine instance
@@ -154,6 +159,8 @@ namespace rpe {
             auto instance = RapturePixelEngine::instance();
             auto platform = instance->platform;
 
+            std::chrono::steady_clock::time_point lastFrameTime, currentFrameTime;
+            
             // Creation has to be called here, so the thread recieves control
             platform->CreateWindow(
                 instance->x, 
@@ -176,9 +183,23 @@ namespace rpe {
             // Unlock all the locks!
             lock.unlock();
             instance->lock.notify_all();
+                
+            instance->callbacks.OnBegin();
+
+            // Main loop, everything happens here
+            // All roads lead to ~~Rome~~ for(;;)
+
             for(;;) {
+                
+                // Time delta calculation
+                currentFrameTime = std::chrono::steady_clock::now();
+                instance->deltaTime = std::chrono::duration_cast<std::chrono::duration<double>>(currentFrameTime - lastFrameTime).count();
+                lastFrameTime = currentFrameTime;
+                
                 platform->PollEvents(instance->callbacks.OnEventCallback);
             }
+
+            instance->callbacks.OnEnd();
         }
     };
     #pragma endregion // CLASSES AND STRUCTS 
