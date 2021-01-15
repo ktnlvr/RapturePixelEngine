@@ -28,14 +28,15 @@ namespace rpe {
             KEY = 1,
         } type;
         
-        /// Specific for EventType::Key
+        /// Specific for EventType::Key, defines key state
         enum class KeyEventType { PRESS = 0, RELEASE = 1, };
 
+        struct KeyEvent {
+            KeyEventType type;
+        };
+
         union {
-            struct 
-            {
-                KeyEventType type;
-            } KeyEvent;
+            KeyEvent keyEvent;
         };
 
         /// Create new empty event object
@@ -190,10 +191,11 @@ namespace rpe {
             // All roads lead to ~~Rome~~ for(;;)
 
             for(;;) {
-                
+                using namespace std::chrono; 
                 // Time delta calculation
-                currentFrameTime = std::chrono::steady_clock::now();
-                instance->deltaTime = std::chrono::duration_cast<std::chrono::duration<double>>(currentFrameTime - lastFrameTime).count();
+                currentFrameTime = steady_clock::now();
+                instance->deltaTime = duration_cast<duration<double>>(
+                        currentFrameTime - lastFrameTime).count();
                 lastFrameTime = currentFrameTime;
                 
                 platform->PollEvents(instance->callbacks.OnEventCallback);
@@ -266,12 +268,12 @@ void rpe::Platform::PollEvents(std::function<void(const Event&)>& callback) {
     {
     case KeyPress:
         out = Event(Event::EventType::KEY);
-        out.KeyEvent.type = Event::KeyEventType::PRESS;
+        out.keyEvent.type = Event::KeyEventType::PRESS;
         break;
 
     case KeyRelease:
         out = Event(Event::EventType::KEY);
-        out.KeyEvent.type = Event::KeyEventType::RELEASE;
+        out.keyEvent.type = Event::KeyEventType::RELEASE;
         break;
 
     default:
