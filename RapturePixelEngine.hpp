@@ -1,6 +1,9 @@
 #ifndef _RAPTURE_PIXEL_ENGINE_H_INCLUDED
 #define _RAPTURE_PIXEL_ENGINE_H_INCLUDED
 
+#pragma push_macro("UNICODE")
+#undef UNICODE
+
 #include <cstring>
 #include <stdlib.h>
 #include <mutex>
@@ -13,6 +16,10 @@
 
 #ifdef __linux__
 #include <X11/Xlib.h>
+#elif _WIN32
+#include <Windows.h>
+#pragma push_macro("CreateWindow")
+#undef CreateWindow
 #endif
 
 // ---------------------------
@@ -92,6 +99,11 @@ namespace rpe {
     #ifdef __linux__
         Display* d;
         Window w;
+    #elif _WIN32
+        const char* WindowClass = "Rapture Pixel Engine Window Class";
+        WNDCLASS wc = { };
+        HINSTANCE hInstance;
+        HWND hwnd;
     #endif
     };
 
@@ -305,7 +317,86 @@ void rpe::Platform::PollEvents(rpe::RapturePixelEngine* engine) {
 
     return;
 }
-#endif // __linux__
+#elif _WIN32
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+
+        FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+
+        EndPaint(hwnd, &ps);
+    }
+    return 0;
+
+    }
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+void rpe::Platform::CreateWindow(
+    int x,
+    int y,
+    unsigned int width,
+    unsigned int height,
+    const char* title) {
+    
+    hInstance = GetModuleHandle(NULL);
+
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = WindowClass;
+
+    RegisterClass(&wc);
+
+    hwnd = CreateWindowExA(
+        0, // Optional window styles.
+        WindowClass, // Window class
+        title, // Window title
+        WS_OVERLAPPEDWINDOW, // Window style
+
+        // Size and position
+        x, y, width, height,
+
+        NULL,       // Parent window    
+        NULL,       // Menu
+        hInstance,  // Instance handle
+        NULL        // Additional application data
+    );
+
+    if (hwnd == NULL)
+    {
+        fprintf(stderr, "Could not create a window handle");
+        std::exit(1);
+    }
+}
+
+void rpe::Platform::CreateGraphics() {
+    // TODO
+}
+
+void rpe::Platform::ShowWindow() {
+    ::ShowWindow(hwnd, SW_SHOWNORMAL);
+}
+
+void rpe::Platform::PollEvents(rpe::RapturePixelEngine* engine) {
+    MSG msg = { };
+    if (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+#endif
+
+#pragma pop_macro("CreateWindow")
+#pragma pop_macro("UNICODE")
 
 #pragma endregion // METHOD IMPLEMENTATIONS
 
