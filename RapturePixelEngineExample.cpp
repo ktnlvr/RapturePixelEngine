@@ -2,7 +2,6 @@
 
 #include "RapturePixelEngine.hpp"
 
-
 int main(int argc, char *argv[]) {
     // if you are not feeling like writing this everywhere
     using namespace rpe;    
@@ -11,11 +10,11 @@ int main(int argc, char *argv[]) {
     RapturePtr engine = RapturePixelEngine::instance();
 
     // Register a callback for general event
-    engine->callbacks.OnKey = [](const Event& e) {
+    engine->callbacks.OnKey = [&](const Event& e) {
         if(e.keyEvent.type == Event::KeyEventType::PRESS) {
-            printf("Pressed\n");
+            engine->SetWindowTitle("Pressed"); 
         } else if (e.keyEvent.type == Event::KeyEventType::RELEASE) {
-            printf("Released\n");
+            engine->SetWindowTitle("Released");
         }
     };
 

@@ -85,6 +85,8 @@ namespace rpe {
         void ShowWindow();
         /// Process all the incoming events in the library requires so
         void PollEvents(rpe::RapturePixelEngine*);
+        /// Set the window title
+        void SetWindowTitle(const char*);
 
     private:
     #ifdef __linux__
@@ -133,6 +135,10 @@ namespace rpe {
         RapturePixelEngine(RapturePixelEngine&&) = delete;
         RapturePixelEngine& operator=(const RapturePixelEngine&) = delete;
         RapturePixelEngine& operator=(RapturePixelEngine&&) = delete;
+
+        void SetWindowTitle(const char* title) {
+            platform->SetWindowTitle(title);       
+        }
 
         void Construct(
             int x = 16, 
@@ -262,6 +268,10 @@ void rpe::Platform::CreateGraphics() {
 void rpe::Platform::ShowWindow() {
     XMapWindow(d, w);
     XFlush(d);
+}
+
+void rpe::Platform::SetWindowTitle(const char* title) {
+    XStoreName(d, w, title);
 }
 
 void rpe::Platform::PollEvents(rpe::RapturePixelEngine* engine) {
